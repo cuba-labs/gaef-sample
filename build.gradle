@@ -2,19 +2,18 @@
 buildscript {
     ext.cubaVersion = '6.10.4'
     repositories {
-        
         maven {
-            url 'https://dl.bintray.com/cuba-platform/main'
-            
+            url 'https://repo.cuba-platform.com/content/groups/work'
         }
         mavenCentral()
         jcenter()
         maven {
             url 'http://maven.vaadin.com/vaadin-addons'
         }
-        
+
     }
     dependencies {
+        classpath 'com.google.cloud.tools:appengine-gradle-plugin:1.+' // Latest 1.x.x release
         classpath "com.haulmont.gradle:cuba-plugin:$cubaVersion"
     }
 }
@@ -47,10 +46,9 @@ cuba {
 
 dependencies {
     appComponent("com.haulmont.cuba:cuba-global:$cubaVersion")
-
 }
 
-def postgres = 'org.postgresql:postgresql:9.4.1212'
+def postgres = 'org.postgresql:postgresql:42.2.5'
 
 configure([globalModule, coreModule, webModule]) {
     apply(plugin: 'java')
@@ -79,7 +77,7 @@ configure(globalModule) {
         }
     }
 
-    
+
 }
 
 configure(coreModule) {
@@ -93,8 +91,8 @@ configure(coreModule) {
         compile(globalModule)
         provided(servletApi)
         jdbc(postgres)
+        jdbc('com.google.cloud.sql:postgres-socket-factory:1.0.11')
         testRuntime(postgres)
-
     }
 
     task cleanConf(description: 'Cleans up conf directory') {
@@ -129,7 +127,7 @@ configure(coreModule) {
         dbPassword = 'cuba'
     }
 }
-    
+
 configure(webModule) {
     configurations {
         webcontent
@@ -140,7 +138,7 @@ configure(webModule) {
         compile(globalModule)
 
     }
-    
+
     task webArchive(type: Zip) {
         from file("$buildDir/web")
         from file('web')
@@ -202,4 +200,35 @@ task restart(dependsOn: ['stop', ":${modulePrefix}-core:deploy", ":${modulePrefi
 
 task wrapper(type: Wrapper) {
     gradleVersion = '4.3.1'
+}
+
+task buildUberJar(type: CubaUberJarBuilding) {
+    singleJar = true
+    logbackConfigurationFile = 'etc/uber-jar-logback.xml'
+    coreJettyEnvPath = 'modules/core/web/META-INF/jetty-env.xml'
+    appProperties = ['cuba.automaticDatabaseUpdate' : true]
+}
+
+//GAE
+apply plugin: 'com.google.cloud.tools.appengine'
+
+appengine {
+    stage {
+        artifact = "$buildDir/distributions/uberJar/app.jar"
+        appEngineDirectory = 'appengine'    //a directory with app.yaml
+        stagingDirectory = "$buildDir/staged-app"
+    }
+
+    deploy {
+        project = 'cuba-sample'     // specify project if the current project is not the default one
+        stopPreviousVersion = true  // default - stop the current version
+        promote = true              // default - & make this the current version
+    }
+}
+
+appengineStage.dependsOn(buildUberJar)
+
+//dummy task. It is required for appengineStage task of the google plugin
+task assemble {
+    doLast {}
 }
