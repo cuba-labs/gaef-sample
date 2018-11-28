@@ -1,4 +1,3 @@
--- begin GAEF_BOOK
 create table GAEF_BOOK (
     ID uuid,
     VERSION integer not null,
@@ -12,5 +11,4 @@ create table GAEF_BOOK (
     TITLE varchar(255),
     --
     primary key (ID)
-)^
--- end GAEF_BOOK
+);
