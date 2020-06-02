@@ -2,6 +2,6 @@
 <menu-config xmlns="http://schemas.haulmont.com/cuba/menu.xsd">
     <menu id="application-gaef"
           insertBefore="administration">
-        <item screen="gaef$Book.browse"/>
+        <item screen="gaef$Book.browse" caption="mainMsg://menu_config.gaef$Book.browse"/>
     </menu>
 </menu-config>

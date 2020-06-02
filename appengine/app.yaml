@@ -1,10 +1,6 @@
-runtime: java
-runtime_config:
-  jdk: openjdk8
-env: flex
+runtime: java11
 manual_scaling:
   instances: 1
-readiness_check:
-  app_start_timeout_sec: 1500
-env_variables:
-  JAVA_OPTS: "-Dapp.home=/opt/app_home"
+entrypoint: "java -Dapp.home=/tmp/app_home -Dspring.profiles.active=gae -jar app.jar"
+vpc_access_connector:
+  name: "projects/cuba-sample-278518/locations/us-central1/connectors/gaef-connector"
