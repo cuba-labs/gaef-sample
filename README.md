@@ -117,6 +117,8 @@ vpc_access_connector:
   name: "projects/cuba-sample-278518/locations/us-central1/connectors/gaef-connector"
 ```
 
+You can find more about ```app.yaml``` syntax in the [documentation](https://cloud.google.com/appengine/docs/standard/java11/config/appref).
+
 ## Update Application Build Script
 
 The next step - configure deployment using the [Gradle plugin](https://github.com/GoogleCloudPlatform/app-gradle-plugin).
