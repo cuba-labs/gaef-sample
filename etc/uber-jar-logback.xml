@@ -65,11 +65,19 @@
 
     <logger name="org.springframework" level="WARN"/>
 
+    <logger name="com.vaadin" level="WARN"/>
+
+    <logger name="org.atmosphere" level="WARN"/>
+
     <logger name="org.activiti" level="INFO"/>
-    
+
+    <logger name="org.jgroups" level="INFO"/>
+
     <logger name="freemarker" level="INFO"/>
 
     <logger name="org.thymeleaf.TemplateEngine" level="INFO"/>
+
+    <logger name="com.zaxxer.hikari" level="INFO"/>
 
     <logger name="org.docx4j" level="WARN"/>
     
@@ -87,9 +95,7 @@
 
     <logger name="org.apache" level="INFO"/>
 
-    <logger name="org.atmosphere" level="INFO"/>
-
-    <logger name="org.atmosphere.cpr.AtmosphereFramework" level="WARN"/>
+    <logger name="org.eclipse.jetty" level="INFO"/>
 
     <logger name="org.docx4j.utils.ResourceUtils" level="ERROR"/>
 

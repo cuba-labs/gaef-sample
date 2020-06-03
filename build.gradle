@@ -1,20 +1,16 @@
 
 buildscript {
-    ext.cubaVersion = '6.10.4'
+    ext.cubaVersion = '7.2.4'
     repositories {
         maven {
-            url 'https://repo.cuba-platform.com/content/groups/work'
-        }
-        mavenCentral()
-        jcenter()
-        maven {
-            url 'http://maven.vaadin.com/vaadin-addons'
-        }
+            url 'https://dl.bintray.com/cuba-platform/main'
 
+        }
+        jcenter()
     }
     dependencies {
-        classpath 'com.google.cloud.tools:appengine-gradle-plugin:1.+' // Latest 1.x.x release
         classpath "com.haulmont.gradle:cuba-plugin:$cubaVersion"
+        classpath 'com.google.cloud.tools:appengine-gradle-plugin:2.2.0'
     }
 }
 
@@ -27,7 +23,6 @@ def webModule = project(":${modulePrefix}-web")
 def servletApi = 'javax.servlet:javax.servlet-api:3.1.0'
 
 
-apply(plugin: 'idea')
 apply(plugin: 'cuba')
 
 cuba {
@@ -39,21 +34,17 @@ cuba {
     tomcat {
         dir = "$project.rootDir/deploy/tomcat"
     }
-    ide {
-        vcs = 'Git'
-    }
 }
 
 dependencies {
     appComponent("com.haulmont.cuba:cuba-global:$cubaVersion")
 }
 
-def postgres = 'org.postgresql:postgresql:42.2.5'
+def postgres = 'org.postgresql:postgresql:42.2.12'
 
 configure([globalModule, coreModule, webModule]) {
     apply(plugin: 'java')
     apply(plugin: 'maven')
-    apply(plugin: 'idea')
     apply(plugin: 'cuba')
 
     dependencies {
@@ -71,13 +62,18 @@ configure([globalModule, coreModule, webModule]) {
 }
 
 configure(globalModule) {
+    dependencies {
+        if (!JavaVersion.current().isJava8()) {
+            runtime('javax.xml.bind:jaxb-api:2.3.1')
+            runtime('org.glassfish.jaxb:jaxb-runtime:2.3.1')
+        }
+    }
+
     entitiesEnhancing {
         main {
             enabled = true
         }
     }
-
-
 }
 
 configure(coreModule) {
@@ -89,21 +85,16 @@ configure(coreModule) {
 
     dependencies {
         compile(globalModule)
-        provided(servletApi)
+        compileOnly(servletApi)
         jdbc(postgres)
-        jdbc('com.google.cloud.sql:postgres-socket-factory:1.0.11')
+        jdbc('com.google.cloud.sql:postgres-socket-factory:1.0.16') {
+            exclude group: 'com.google.guava', module: 'guava'
+        }
         testRuntime(postgres)
     }
 
-    task cleanConf(description: 'Cleans up conf directory') {
-        doLast {
-            def dir = new File(cuba.tomcat.dir, "/conf/${modulePrefix}-core")
-            if (dir.isDirectory()) {
-                ant.delete(includeemptydirs: true) {
-                    fileset(dir: dir, includes: '**/*', excludes: 'local.app.properties')
-                }
-            }
-        }
+    task cleanConf(description: 'Cleans up conf directory', type: Delete) {
+        delete "$cuba.appHome/${modulePrefix}-core/conf"
     }
 
     task deploy(dependsOn: [assemble, cleanConf], type: CubaDeployment) {
@@ -112,19 +103,9 @@ configure(coreModule) {
     }
 
     task createDb(dependsOn: assembleDbScripts, description: 'Creates local database', type: CubaDbCreation) {
-        dbms = 'postgres'
-        host = 'localhost'
-        dbName = 'gaef'
-        dbUser = 'cuba'
-        dbPassword = 'cuba'
     }
 
     task updateDb(dependsOn: assembleDbScripts, description: 'Updates local database', type: CubaDbUpdate) {
-        dbms = 'postgres'
-        host = 'localhost'
-        dbName = 'gaef'
-        dbUser = 'cuba'
-        dbPassword = 'cuba'
     }
 }
 
@@ -134,9 +115,8 @@ configure(webModule) {
     }
 
     dependencies {
-        provided(servletApi)
+        compileOnly(servletApi)
         compile(globalModule)
-
     }
 
     task webArchive(type: Zip) {
@@ -152,7 +132,7 @@ configure(webModule) {
     task deployConf(type: Copy) {
         from file('src')
         include "com/company/gaef/**"
-        into "$cuba.tomcat.dir/conf/${modulePrefix}"
+        into "$cuba.appHome/${modulePrefix}/conf"
     }
 
     task clearMessagesCache(type: CubaClearMessagesCache) {
@@ -160,15 +140,8 @@ configure(webModule) {
     }
     deployConf.dependsOn clearMessagesCache
 
-    task cleanConf(description: 'Cleans up conf directory') {
-        doLast {
-            def dir = new File(cuba.tomcat.dir, "/conf/${modulePrefix}")
-            if (dir.isDirectory()) {
-                ant.delete(includeemptydirs: true) {
-                    fileset(dir: dir, includes: '**/*', excludes: 'local.app.properties')
-                }
-            }
-        }
+    task cleanConf(description: 'Cleans up conf directory', type: Delete) {
+        delete "$cuba.appHome/${modulePrefix}/conf"
     }
 
     task deploy(dependsOn: [assemble, cleanConf], type: CubaDeployment) {
@@ -176,10 +149,6 @@ configure(webModule) {
         appJars(modulePrefix + '-global', modulePrefix + '-web')
     }
 }
-
-
-
-
 
 task undeploy(type: Delete, dependsOn: ":${modulePrefix}-web:cleanConf") {
     delete("$cuba.tomcat.dir/shared")
@@ -194,41 +163,36 @@ task restart(dependsOn: ['stop', ":${modulePrefix}-core:deploy", ":${modulePrefi
                 socket(server: 'localhost', port: '8787')
             }
         }
-        start.execute()
     }
 }
-
-task wrapper(type: Wrapper) {
-    gradleVersion = '4.3.1'
-}
+restart.finalizedBy start
 
 task buildUberJar(type: CubaUberJarBuilding) {
-    singleJar = true
     logbackConfigurationFile = 'etc/uber-jar-logback.xml'
-    coreJettyEnvPath = 'modules/core/web/META-INF/jetty-env.xml'
-    appProperties = ['cuba.automaticDatabaseUpdate' : true]
+    singleJar = true
+    appProperties = ['cuba.automaticDatabaseUpdate': true]
 }
 
-//GAE
 apply plugin: 'com.google.cloud.tools.appengine'
 
 appengine {
     stage {
         artifact = "$buildDir/distributions/uberJar/app.jar"
-        appEngineDirectory = 'appengine'    //a directory with app.yaml
+        appEngineDirectory = 'appengine'    // a directory with app.yaml
         stagingDirectory = "$buildDir/staged-app"
     }
 
     deploy {
-        project = 'cuba-sample'     // specify project if the current project is not the default one
+        projectId = 'cuba-sample-278518'     // specify a project id if the current project is not the default one
         stopPreviousVersion = true  // default - stop the current version
         promote = true              // default - & make this the current version
+        version = 'GCLOUD_CONFIG'
     }
 }
 
 appengineStage.dependsOn(buildUberJar)
 
-//dummy task. It is required for appengineStage task of the google plugin
+// a dummy task. It is required for appengineStage task of the google plugin
 task assemble {
     doLast {}
 }

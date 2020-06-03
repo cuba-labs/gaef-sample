@@ -1,7 +1,4 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <screen-config xmlns="http://schemas.haulmont.com/cuba/screens.xsd">
-    <screen id="gaef$Book.browse"
-            template="com/company/gaef/web/book/book-browse.xml"/>
-    <screen id="gaef$Book.edit"
-            template="com/company/gaef/web/book/book-edit.xml"/>
+
 </screen-config>
